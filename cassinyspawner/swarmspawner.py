@@ -11,6 +11,9 @@ from pprint import pformat
 import docker
 from docker.errors import APIError
 from docker.utils import kwargs_from_env
+import errno
+import os
+import os.path
 from tornado import gen
 
 from jupyterhub.spawner import Spawner
@@ -289,6 +292,7 @@ class SwarmSpawner(Spawner):
                 if 'source' in m:
                     m['source'] = m['source'].format(
                         username=self.service_owner)
+                    self._ensure_source_dir['source'])
 
                 if 'driver_config' in m:
                     device = m['driver_config']['options']['device'].format(
@@ -378,3 +382,17 @@ class SwarmSpawner(Spawner):
             self.service_name, self.service_id[:7])
 
         self.clear_state()
+
+
+    def _ensure_source_dir(self, source):
+        """Ensure source directory exists for mounts
+        """
+        try:
+            os.mkdir(source)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+        s = os.stat(os.path.dirname(source))
+        # only need to check for st_uid for testing
+        if s.st_uid != os.stat(source).st_uid:
+            os.chown(source, s.st_uid, s.st_gid)

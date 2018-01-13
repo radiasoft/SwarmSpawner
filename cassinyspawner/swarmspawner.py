@@ -333,8 +333,12 @@ class SwarmSpawner(Spawner):
 
             task_spec = {'container_spec': container_spec,
                          'resources': resources,
-                         'placement': placement
-                         }
+                         'placement': placement,
+                         'restart_policy': {
+                             'Condition': 'none',
+                         },
+            }
+
             task_tmpl = docker.types.TaskTemplate(**task_spec)
 
             resp = yield self.docker('create_service',

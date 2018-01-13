@@ -118,15 +118,9 @@ class SwarmSpawner(Spawner):
             return (self.tls_cert, self.tls_key)
         return None
 
-    _service_owner = None
-
     @property
     def service_owner(self):
-        if self._service_owner is None:
-            m = hashlib.md5()
-            m.update(self.user.name.encode('utf-8'))
-            self._service_owner = m.hexdigest()
-        return self._service_owner
+        return self.user.name
 
     @property
     def service_name(self):

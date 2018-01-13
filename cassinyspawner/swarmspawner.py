@@ -292,15 +292,17 @@ class SwarmSpawner(Spawner):
                 if 'source' in m:
                     m['source'] = m['source'].format(
                         username=self.service_owner)
-                    self._ensure_source_dir['source'])
+                    self._ensure_user_dir(['source'])
 
                 if 'driver_config' in m:
                     device = m['driver_config']['options']['device'].format(
                         username=self.service_owner
                     )
+                    self._ensure_user_dir(device)
                     m['driver_config']['options']['device'] = device
                     m['driver_config'] = docker.types.DriverConfig(
                         **m['driver_config'])
+
 
                 container_spec['mounts'].append(docker.types.Mount(**m))
 
@@ -384,15 +386,21 @@ class SwarmSpawner(Spawner):
         self.clear_state()
 
 
-    def _ensure_source_dir(self, source):
-        """Ensure source directory exists for mounts
+    def _ensure_user_dir(self, user_d):
+        """Ensure mount source/device exists and has correct uid/gid
         """
+        if user_d.startswith(':/'):
+            # skip the colon in device config
+            user_d = user_d[1:]
+        elif not user_d.startswith('/'):
+            # source for nfs volumes does not start with a /
+            return
         try:
-            os.mkdir(source)
+            os.mkdir(user_d)
         except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
-        s = os.stat(os.path.dirname(source))
+        s = os.stat(os.path.dirname(user_d))
         # only need to check for st_uid for testing
-        if s.st_uid != os.stat(source).st_uid:
-            os.chown(source, s.st_uid, s.st_gid)
+        if s.st_uid != os.stat(user_d).st_uid:
+            os.chown(user_d, s.st_uid, s.st_gid)
